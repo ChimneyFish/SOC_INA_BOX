@@ -1,0 +1,140 @@
+version: "3"
+services:
+  thehive:
+    image: strangebee/thehive:5.2
+    depends_on:
+      - cassandra
+      - elasticsearch
+      - minio
+      - cortex
+      - misp
+      - kibana
+    mem_limit: 1500m
+    ports:
+      - "9000:9000"
+    environment:
+      - JVM_OPTS="-Xms1024M -Xmx1024M"
+    command:
+      - --secret
+      - "mySecretForTheHive"
+      - "--cql-hostnames"
+      - "cassandra"
+      - "--index-backend"
+      - "elasticsearch"
+      - "--es-hostnames"
+      - "elasticsearch"
+      - "--s3-endpoint"
+      - "http://minio:9000"
+      - "--s3-access-key"
+      - "minioadmin"
+      - "--s3-secret-key"
+      - "minioadmin"
+      - "--s3-bucket"
+      - "thehive"
+      - "--s3-use-path-access-style"
+      - "--cortex-hostnames"
+      - "cortex"
+      - "--cortex-keys"
+      - "misp"
+      - "kitana"
+
+  cassandra:
+    image: 'cassandra:4'
+    mem_limit: 1000m
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=TheHive
+    volumes:
+      - cassandradata:/var/lib/cassandra
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    mem_limit: 512m
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearchdata:/usr/share/elasticsearch/data
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+  db:
+    image: mysql:latest
+    container_name: db
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      - "MYSQL_USER=misp"
+      - "MYSQL_PASSWORD=makoma13"
+      - "MYSQL_ROOT_PASSWORD=makoma13"
+      - "MYSQL_DATABASE=misp"
+    volumes:
+      - ./vol/mysql:/var/lib/mysql
+  misp:
+    image: coolacid/misp-docker:core-latest
+    container_name: misp
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - db
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - "HOSTNAME=https://localhost"
+      - "REDIS_FQDN=redis"
+      - "INIT=true"             # Initialze MISP, things includes, attempting to import SQL and the Files DIR
+      - "CRON_USER_ID=1"        # The MISP user ID to run cron jobs as
+      - "DISIPV6=true" # Disable IPV6 in nginx
+
+  misp-modules:
+    image: coolacid/misp-docker:modules-latest
+    container_name: misp-modules
+    environment:
+      - "REDIS_BACKEND=redis"
+    depends_on:
+      - redis
+      - db
+
+  minio:
+    image: quay.io/minio/minio
+    mem_limit: 512m
+    command: ["minio", "server", "/data", "--console-address", ":9090"]
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=makoma13
+    ports:
+      - "9090:9090"
+    volumes:
+      - "miniodata:/data"
+  kibana:
+    image: 'docker.elastic.co/kibana/kibana:7.11.1'
+    container_name: kibana
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    ports:
+      - '5601:5601'
+  cortex:
+    image: thehiveproject/cortex:3.1.7
+    environment:
+      - job_directory=/tmp/cortex-jobs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/cortex-jobs:/tmp/cortex-jobs
+    depends_on:
+      - elasticsearch
+    ports:
+      - "9001:9001"
+
+volumes:
+  miniodata:
+  cassandradata:
+  elasticsearchdata:
+  mispdata:
+  kibanadata:
