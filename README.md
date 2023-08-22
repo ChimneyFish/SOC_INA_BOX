@@ -1,5 +1,5 @@
-###SOC-INA-BOX###
-#All in one Cyber Security Operations Center in on central location#
+##      SOC-INA-BOX
+#   All in one Cyber Security Operations Center in on central location
 
 Step 1 : install Kali Purple on a VM or Physical Machine.
    Physical Machine minimal Requirements 
