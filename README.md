@@ -7,4 +7,5 @@ Step 1 : install Kali Purple on a VM or Physical Machine.
       16 gigs of RAM
       500GB HD
 
-Step 2 : 
+Step 2 : Download the Repo
+   git clone 
