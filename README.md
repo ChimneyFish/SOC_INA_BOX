@@ -9,3 +9,5 @@ Step 1 : install Kali Purple on a VM or Physical Machine.
 
 Step 2 : Download the Repo
      git clone https://github.com/ChimneyFish/SOC_INA_BOX.git
+
+# Still a work in progress
